@@ -1,109 +1,162 @@
-import { StyleSheet, Image, Platform } from 'react-native';
-
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
+import { useEffect, useState } from 'react';
+import { StyleSheet, FlatList, View, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/firebaseConfig';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 
+interface LocationItem {
+  id: string;
+  latitude: number;
+  longitude: number;
+  numberOfTrees: number;
+  note: string;
+  status: string;
+  submittedBy: string;
+  timestamp: any;
+}
+
 export default function TabTwoScreen() {
+  const [locations, setLocations] = useState<LocationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchLocations();
+  }, []);
+
+  const fetchLocations = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'locations'));
+      const fetchedLocations: LocationItem[] = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        fetchedLocations.push({
+          id: doc.id,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          numberOfTrees: data.numberOfTrees,
+          status: data.status,
+          note: data.note,
+          submittedBy: data.submittedBy,
+          timestamp: data.timestamp,
+        });
+      });
+
+      setLocations(fetchedLocations);
+    } catch (error) {
+      console.error('Error fetching locations: ', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    setLoading(true);  // Show the loader when refreshing
+    fetchLocations();  // Re-fetch the locations
+  };
+
+  const renderItem = ({ item }: { item: LocationItem }) => (
+    <ThemedView style={styles.card}>
+      <ThemedText type="subtitle" style={styles.cardTitle}>
+        Submitted by: {item.submittedBy}
+      </ThemedText>
+      <ThemedText style={styles.cardText}>Latitude: {item.latitude.toFixed(6)}</ThemedText>
+      <ThemedText style={styles.cardText}>Longitude: {item.longitude.toFixed(6)}</ThemedText>
+      <ThemedText style={styles.cardText}>Number of Trees: {item.numberOfTrees}</ThemedText>
+      <ThemedText style={styles.cardText}>Status: {item.status}</ThemedText>
+      {item.note ? <ThemedText style={styles.cardText}>Note: {item.note}</ThemedText> : null}
+      <ThemedText style={styles.cardTime}>
+        {new Date(item.timestamp?.seconds * 1000).toLocaleString()}
+      </ThemedText>
+    </ThemedView>
+  );
+
+  const ListHeader = () => (
+    <View style={{ alignItems: 'center', marginTop: 50 }}>
+      <ThemedText type="title">Saved Locations</ThemedText>
+
+      {/* Refresh Button */}
+      <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
+        <ThemedText style={styles.refreshButtonText}>Refresh</ThemedText>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
+    <View style={styles.container}>
+      <FlatList
+        data={locations}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        ListHeaderComponent={ListHeader}
+        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <ThemedText style={{ textAlign: 'center', marginTop: 20 }}>
+            No locations saved yet.
           </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user's current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+        }
+      />
+      {loading && (
+        <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1, // Ensures the container takes full height
+    backgroundColor: '#000',
+    paddingTop: 20, // Optional: Adjust the top padding if needed
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  card: {
+    backgroundColor: '#000',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#f51612',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#f6fcf1',
+  },
+  cardText: {
+    fontSize: 16,
+    color: '#cde5bd',
+    marginBottom: 4,
+  },
+  cardTime: {
+    fontSize: 12,
+    color: '#f51612',
+    marginTop: 8,
+    textAlign: 'right',
+  },
+  loadingIndicator: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -25 }, { translateY: -25 }],
+  },
+  refreshButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#f51612', // Button color
+    borderRadius: 5,
+  },
+  refreshButtonText: {
+    fontSize: 16,
+    color: '#fff',
   },
 });
