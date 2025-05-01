@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
-import { Image, StyleSheet, Button, View, Text, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { Image, StyleSheet, Button, View, Text, ActivityIndicator, Alert, TextInput, Modal, Pressable, ScrollView } from 'react-native';
 import * as Location from 'expo-location';
-import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { collection, addDoc } from 'firebase/firestore';
-import { db } from '@/firebaseConfig'; // adjust path as needed
+import { db } from '@/firebaseConfig';
 
 export default function HomeScreen() {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [temperature, setTemperature] = useState<string | null>(null);
+  const [weatherDetails, setWeatherDetails] = useState<any>(null);
 
-  // New states for the fields
+
   const [numberOfTrees, setNumberOfTrees] = useState('');
   const [note, setNote] = useState('');
   const [submittedBy, setSubmittedBy] = useState('');
@@ -24,10 +25,12 @@ export default function HomeScreen() {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Denied', 'Location permission is required!');
+        setLoading(false);
         return;
       }
       let loc = await Location.getCurrentPositionAsync({});
       setLocation(loc.coords);
+      fetchTemperature(loc.coords.latitude, loc.coords.longitude);
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Could not fetch location.');
@@ -35,6 +38,26 @@ export default function HomeScreen() {
       setLoading(false);
     }
   };
+
+  const fetchTemperature = async (latitude: number, longitude: number) => {
+    try {
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+      const data = await res.json();
+  
+      if (data.current_weather) {
+        setTemperature(`${data.current_weather.temperature}°C`);
+        setWeatherDetails(data.current_weather);
+      } else {
+        setTemperature('Unavailable');
+        setWeatherDetails(null);
+      }
+    } catch (err) {
+      console.error('Error fetching temperature:', err);
+      setTemperature('Error');
+      setWeatherDetails(null);
+    }
+  };
+  
 
   const saveLocationToFirestore = async () => {
     if (!location) {
@@ -58,15 +81,13 @@ export default function HomeScreen() {
         submittedBy,
         timestamp: new Date(),
       });
-      console.log("Document written with ID: ", docRef.id);
-      Alert.alert('Success', 'Location and data saved successfully!');
 
-      // Clear form after saving
+      Alert.alert('Success', 'Location and data saved successfully!');
       setNumberOfTrees('');
       setNote('');
       setSubmittedBy('');
       setLocation(null);
-
+      setTemperature(null);
     } catch (e) {
       console.error("Error adding document: ", e);
       Alert.alert('Error', 'Failed to save location.');
@@ -77,7 +98,7 @@ export default function HomeScreen() {
 
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+      headerBackgroundColor={{ light: '#A1CEDC', dark: '#004520' }}
       headerImage={
         <Image
           source={require('@/assets/images/partial-react-logo.png')}
@@ -86,24 +107,30 @@ export default function HomeScreen() {
       }
     >
       <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Area for Tree plantation by Bengal Tree Foundation</ThemedText>
+        <ThemedText type="subtitle">Tree plantation locations by Bengal Tree Foundation</ThemedText>
         <ThemedText>
-          Fetch your current location and save with other necessary data. Submitted data can be seen in Explore tab & in map.
+          Go to a plantation site where trees can be planted and Fetch current location, then save with other necessary data like number of trees that can be planted, details of the plantation site in notes. Submitted data can be seen in Explore tab & map.
         </ThemedText>
       </ThemedView>
 
-      {/* Location Buttons and Display */}
       <View style={{ marginTop: 20, alignItems: 'center', paddingHorizontal: 20 }}>
         <Button title="Fetch Current Location" onPress={fetchLocation} />
-
         {loading && <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 10 }} />}
 
         {location && (
-          <View style={{ marginTop: 20, backgroundColor: 'white', padding: 10, borderRadius: 8, width: '100%' }}>
-            <Text>Latitude: {location.latitude}</Text>
-            <Text>Longitude: {location.longitude}</Text>
+          <View style={styles.infoBox}>
+            <View style={styles.row}>
+              <Text>Latitude: {location.latitude.toFixed(6)}</Text>
+            
+                <Text style={styles.tempText}>
+                  {temperature ?? '...'}
+                </Text>
+              
+            </View>
+            <View style={styles.row}>
+              <Text>Longitude: {location.longitude.toFixed(6)}</Text>
+            </View>
 
-            {/* Input fields */}
             <TextInput
               placeholder="Number of Trees"
               value={numberOfTrees}
@@ -112,7 +139,7 @@ export default function HomeScreen() {
               style={styles.input}
             />
             <TextInput
-              placeholder="Note"
+              placeholder="Note (in details)"
               value={note}
               onChangeText={setNote}
               style={styles.input}
@@ -125,7 +152,6 @@ export default function HomeScreen() {
             />
           </View>
         )}
-
         {location && (
           <View style={{ marginTop: 20, width: '100%' }}>
             <Button title={saving ? "Saving..." : "Save Location Data"} onPress={saveLocationToFirestore} disabled={saving} />
@@ -137,18 +163,13 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   stepContainer: {
     gap: 8,
     marginBottom: 8,
   },
   reactLogo: {
-    height: 178,
-    width: 290,
+    height: 200,
+    width: 390,
     bottom: 0,
     left: 0,
     position: 'absolute',
@@ -162,4 +183,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     width: '100%',
   },
+  infoBox: {
+    marginTop: 20,
+    backgroundColor: 'white',
+    padding: 10,
+    borderRadius: 8,
+    width: '100%',
+  },
+  row: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 8,
+},
+tempText: {
+  fontSize: 16,
+  color: '#f51612',
+  fontWeight: 'bold',
+  paddingLeft: 10,
+},
+
 });
