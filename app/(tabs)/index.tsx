@@ -86,7 +86,7 @@ export default function HomeScreen() {
       }
     >
       <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Save area for Tree plantation by Bengal Tree Foundation</ThemedText>
+        <ThemedText type="subtitle">Area for Tree plantation by Bengal Tree Foundation</ThemedText>
         <ThemedText>
           Fetch your current location and save with other necessary data. Submitted data can be seen in Explore tab & in map.
         </ThemedText>
@@ -118,7 +118,7 @@ export default function HomeScreen() {
               style={styles.input}
             />
             <TextInput
-              placeholder="Submitted By"
+              placeholder="Submitted By (your name)"
               value={submittedBy}
               onChangeText={setSubmittedBy}
               style={styles.input}

@@ -97,10 +97,16 @@ export default function ExMapScreen() {
         const icon = loc.status === 'done' ? greenIcon : redIcon;
 
         const marker = L.marker([loc.latitude, loc.longitude], { icon }).addTo(map);
-        marker.bindPopup(\`<strong>\${loc.submittedBy}</strong><br/>
+        marker.bindPopup(\`
+          By: <strong>\${loc.submittedBy}</strong><br/>
           Trees: \${loc.numberOfTrees}<br/>
           Status: \${loc.status}<br/>
-          Note: \${loc.note || 'N/A'}\`);
+          Note: \${loc.note || 'N/A'}<br/>
+          <a href="https://www.google.com/maps?q=\${loc.latitude},\${loc.longitude}" target="_blank">
+            Open in Google Maps
+          </a>
+        \`);
+
       });
     </script>
   </body>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, FlatList, View, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { StyleSheet, FlatList, View, ActivityIndicator, Linking, TouchableOpacity } from 'react-native';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/firebaseConfig';
 import { ThemedText } from '@/components/ThemedText';
@@ -65,8 +65,19 @@ export default function TabTwoScreen() {
       <ThemedText style={styles.cardText}>Latitude: {item.latitude.toFixed(6)}</ThemedText>
       <ThemedText style={styles.cardText}>Longitude: {item.longitude.toFixed(6)}</ThemedText>
       <ThemedText style={styles.cardText}>Number of Trees: {item.numberOfTrees}</ThemedText>
-      <ThemedText style={styles.cardText}>Status: {item.status}</ThemedText>
       {item.note ? <ThemedText style={styles.cardText}>Note: {item.note}</ThemedText> : null}
+      <ThemedText style={styles.cardText}>Status: {item.status}</ThemedText>
+      
+      {/* Google Maps Link */}
+      <TouchableOpacity
+        onPress={() => {
+          const url = `https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}`;
+          Linking.openURL(url);
+        }}
+      >
+        <ThemedText style={styles.mapLink}>Open in Google Maps</ThemedText>
+      </TouchableOpacity>
+  
       <ThemedText style={styles.cardTime}>
         {new Date(item.timestamp?.seconds * 1000).toLocaleString()}
       </ThemedText>
@@ -158,5 +169,9 @@ const styles = StyleSheet.create({
   refreshButtonText: {
     fontSize: 16,
     color: '#fff',
+  },
+  mapLink: {
+    color: '#1e90ff',
+    marginTop: 4,
   },
 });
