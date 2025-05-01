@@ -11,6 +11,7 @@ interface LocationItem {
   latitude: number;
   longitude: number;
   numberOfTrees: number;
+  u_id: number;
   note: string;
   status: string;
   submittedBy: string;
@@ -37,6 +38,7 @@ export default function TabTwoScreen() {
           latitude: data.latitude,
           longitude: data.longitude,
           numberOfTrees: data.numberOfTrees,
+          u_id: data.u_id,
           status: data.status,
           note: data.note,
           submittedBy: data.submittedBy,
@@ -62,6 +64,7 @@ export default function TabTwoScreen() {
       <ThemedText type="subtitle" style={styles.cardTitle}>
         Submitted by: {item.submittedBy}
       </ThemedText>
+      <ThemedText style={styles.cardText}>id: {item.u_id}</ThemedText>
       <ThemedText style={styles.cardText}>Latitude: {item.latitude.toFixed(6)}</ThemedText>
       <ThemedText style={styles.cardText}>Longitude: {item.longitude.toFixed(6)}</ThemedText>
       <ThemedText style={styles.cardText}>Number of Trees: {item.numberOfTrees}</ThemedText>

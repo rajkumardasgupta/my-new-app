@@ -80,6 +80,7 @@ export default function HomeScreen() {
         note,
         submittedBy,
         timestamp: new Date(),
+        u_id: Date.now(),
       });
 
       Alert.alert('Success', 'Location and data saved successfully!');
