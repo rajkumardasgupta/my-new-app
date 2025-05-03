@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, FlatList, View, ActivityIndicator, Linking, TouchableOpacity } from 'react-native';
+import {
+  StyleSheet,
+  FlatList,
+  View,
+  ActivityIndicator,
+  Linking,
+  TouchableOpacity,
+} from 'react-native';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/firebaseConfig';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 
 interface LocationItem {
   id: string;
@@ -21,6 +27,7 @@ interface LocationItem {
 export default function TabTwoScreen() {
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<'pending' | 'done'>('pending');
 
   useEffect(() => {
     fetchLocations();
@@ -55,9 +62,13 @@ export default function TabTwoScreen() {
   };
 
   const handleRefresh = () => {
-    setLoading(true);  // Show the loader when refreshing
-    fetchLocations();  // Re-fetch the locations
+    setLoading(true);
+    fetchLocations();
   };
+
+  const filteredLocations = locations.filter(
+    (item) => item.status === filterStatus
+  );
 
   const renderItem = ({ item }: { item: LocationItem }) => (
     <ThemedView style={styles.card}>
@@ -70,8 +81,7 @@ export default function TabTwoScreen() {
       <ThemedText style={styles.cardText}>Number of Trees: {item.numberOfTrees}</ThemedText>
       {item.note ? <ThemedText style={styles.cardText}>Note: {item.note}</ThemedText> : null}
       <ThemedText style={styles.cardText}>Status: {item.status}</ThemedText>
-      
-      {/* Google Maps Link */}
+
       <TouchableOpacity
         onPress={() => {
           const url = `https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}`;
@@ -80,35 +90,69 @@ export default function TabTwoScreen() {
       >
         <ThemedText style={styles.mapLink}>Open in Google Maps</ThemedText>
       </TouchableOpacity>
-  
+
       <ThemedText style={styles.cardTime}>
         {new Date(item.timestamp?.seconds * 1000).toLocaleString()}
       </ThemedText>
     </ThemedView>
   );
 
-  const ListHeader = () => (
-    <View style={{ alignItems: 'center', marginTop: 50 }}>
-      <ThemedText type="title">Saved Locations</ThemedText>
-
-      {/* Refresh Button */}
-      <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-        <ThemedText style={styles.refreshButtonText}>Refresh</ThemedText>
-      </TouchableOpacity>
-    </View>
-  );
+  const ListHeader = () => {
+    const pendingCount = locations
+      .filter((item) => item.status === 'pending')
+      .reduce((sum, item) => sum + item.numberOfTrees, 0);
+  
+    const doneCount = locations
+      .filter((item) => item.status === 'done')
+      .reduce((sum, item) => sum + item.numberOfTrees, 0);
+  
+    return (
+      <View style={{ alignItems: 'center', marginTop: 30 }}>
+        <ThemedText type="title" style={styles.Title}>All Saved Locations</ThemedText>
+  
+        {/* Filter Buttons with Tree Counts */}
+        <View style={styles.filterRow}>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              filterStatus === 'pending' && styles.filterButtonActive,
+            ]}
+            onPress={() => setFilterStatus('pending')}
+          >
+            <ThemedText style={styles.filterButtonText}>Pending ({pendingCount} trees) </ThemedText>
+          </TouchableOpacity>
+  
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              filterStatus === 'done' && styles.filterButtonActive,
+            ]}
+            onPress={() => setFilterStatus('done')}
+          >
+            <ThemedText style={styles.filterButtonText}>Done ({doneCount} trees)</ThemedText>
+          </TouchableOpacity>
+        </View>
+  
+        {/* Refresh Button */}
+        <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
+          <ThemedText style={styles.refreshButtonText}>Refresh</ThemedText>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+  
 
   return (
     <View style={styles.container}>
       <FlatList
-        data={locations}
+        data={filteredLocations}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         ListHeaderComponent={ListHeader}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <ThemedText style={{ textAlign: 'center', marginTop: 20 }}>
-            No locations saved yet.
+            No {filterStatus} locations found.
           </ThemedText>
         }
       />
@@ -121,9 +165,9 @@ export default function TabTwoScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, // Ensures the container takes full height
+    flex: 1,
     backgroundColor: '#000',
-    paddingTop: 20, // Optional: Adjust the top padding if needed
+    paddingTop: 20,
   },
   listContent: {
     paddingHorizontal: 16,
@@ -146,6 +190,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: '#f6fcf1',
   },
+  Title: {
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 4,
+    color: '#f6fcf1',
+  },
   cardText: {
     fontSize: 16,
     color: '#cde5bd',
@@ -166,7 +216,7 @@ const styles = StyleSheet.create({
   refreshButton: {
     marginTop: 20,
     padding: 10,
-    backgroundColor: '#f51612', // Button color
+    backgroundColor: '#f51612',
     borderRadius: 5,
   },
   refreshButtonText: {
@@ -176,5 +226,25 @@ const styles = StyleSheet.create({
   mapLink: {
     color: '#1e90ff',
     marginTop: 4,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    marginTop: 16,
+  },
+  filterButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    marginHorizontal: 8,
+  },
+  filterButtonActive: {
+    backgroundColor: '#f51612',
+    borderColor: '#f51612',
+  },
+  filterButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
 });

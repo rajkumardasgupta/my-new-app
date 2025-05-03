@@ -6,6 +6,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/firebaseConfig';
+import { StatusBar } from 'expo-status-bar';
 
 export default function HomeScreen() {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -98,8 +99,10 @@ export default function HomeScreen() {
   };
 
   return (
+    <>
+    <StatusBar style="light" backgroundColor="#004520" />
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#004520' }}
+      headerBackgroundColor={{ light: '#004520', dark: '#004520' }}
       headerImage={
         <Image
           source={require('@/assets/images/partial-react-logo.png')}
@@ -108,14 +111,21 @@ export default function HomeScreen() {
       }
     >
       <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Tree plantation locations by Bengal Tree Foundation</ThemedText>
-        <ThemedText>
-          Go to a plantation site where trees can be planted and Fetch current location, then save with other necessary data like number of trees that can be planted, details of the plantation site in notes. Submitted data can be seen in Explore tab & map.
+        <ThemedText type="subtitle">
+          Save Potential Sites for Tree Plantation or Tree Care
         </ThemedText>
       </ThemedView>
 
-      <View style={{ marginTop: 20, alignItems: 'center', paddingHorizontal: 20 }}>
-        <Button title="Fetch Current Location" onPress={fetchLocation} />
+
+      <View style={{ marginTop: 3, marginBottom: 3, alignItems: 'center', paddingHorizontal: 20 }}>
+        {/* <Button
+          title="Fetch Current Location"
+          onPress={fetchLocation}
+          color="#004520" // Deep green
+        /> */}
+        <Pressable style={({ pressed }) => [styles.button, pressed && styles.pressed]} onPress={fetchLocation}>
+          <Text style={styles.text}>Fetch Current Location</Text>
+        </Pressable>
         {loading && <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 10 }} />}
 
         {location && (
@@ -159,7 +169,19 @@ export default function HomeScreen() {
           </View>
         )}
       </View>
+      <ThemedView style={styles.stepContainer}>
+      <ThemedText style={{ color: 'white' }}>
+        Find a site where trees can be planted, or identify existing trees where old tree guards need to be removed.{"\n"}
+        <Text style={{ color: '#00FF00' }}>Fetch the current location</Text> of the site by pressing the{" "}
+        <Text style={{ color: '#FFD700' }}>"Fetch Current Location"</Text> button, then save the following details:{"\n"}
+        • <Text style={{ color: '#00FFFF' }}>Number of trees</Text> that can be planted or actions required (e.g., tree guard removal){"\n"}
+        • <Text style={{ color: '#00FFFF' }}>Notes</Text> describing the plantation site{"\n"}
+        The submitted data will be visible in the <Text style={{ color: '#FFA500' }}>Explore List</Text> tab and on the <Text style={{ color: '#FFA500' }}>Explore Map</Text>.
+      </ThemedText>
+
+      </ThemedView>
     </ParallaxScrollView>
+    </>
   );
 }
 
@@ -196,12 +218,32 @@ const styles = StyleSheet.create({
   justifyContent: 'space-between',
   alignItems: 'center',
   marginBottom: 8,
-},
-tempText: {
-  fontSize: 16,
-  color: '#f51612',
-  fontWeight: 'bold',
-  paddingLeft: 10,
-},
-
+  },
+  tempText: {
+    fontSize: 16,
+    color: '#f51612',
+    fontWeight: 'bold',
+    paddingLeft: 10,
+  },
+  button: {
+    backgroundColor: '#004520',       // Deep green
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,                 // Rounded edges
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,                     // Android shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  pressed: {
+    opacity: 0.8,                     // Slight dim when pressed
+  },
+  text: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });

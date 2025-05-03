@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, ActivityIndicator, StyleSheet, Button } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/firebaseConfig';
@@ -18,12 +18,14 @@ interface LocationItem {
 export default function ExMapScreen() {
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const webviewRef = useRef<WebView>(null);
 
   useEffect(() => {
     fetchLocations();
   }, []);
 
   const fetchLocations = async () => {
+    setLoading(true);
     try {
       const querySnapshot = await getDocs(collection(db, 'locations'));
       const fetchedLocations: LocationItem[] = [];
@@ -43,6 +45,36 @@ export default function ExMapScreen() {
       });
 
       setLocations(fetchedLocations);
+
+      // Inject new markers to the map
+      if (webviewRef.current) {
+        const jsCode = `
+          (function() {
+            if (typeof map !== 'undefined') {
+              map.eachLayer(function (layer) {
+                if (layer instanceof L.Marker) map.removeLayer(layer);
+              });
+
+              const locations = ${JSON.stringify(fetchedLocations)};
+              locations.forEach(loc => {
+                const icon = loc.status === 'done' ? greenIcon : redIcon;
+                const marker = L.marker([loc.latitude, loc.longitude], { icon }).addTo(map);
+                marker.bindPopup(\`
+                  <strong>Trees:</strong> \${loc.numberOfTrees}<br/>
+                  <strong>Status:</strong> \${loc.status}<br/>
+                  <strong>Note:</strong> \${loc.note || 'N/A'}<br/>
+                  <strong>By:</strong> \${loc.submittedBy}<br/>
+                  <a href="https://www.google.com/maps?q=\${loc.latitude},\${loc.longitude}" target="_blank">
+                    Open in Google Maps
+                  </a>
+                \`);
+              });
+            }
+          })();
+        `;
+        webviewRef.current.injectJavaScript(jsCode);
+      }
+
     } catch (error) {
       console.error('Error fetching locations: ', error);
     } finally {
@@ -57,13 +89,8 @@ export default function ExMapScreen() {
     <meta charset="utf-8" />
     <title>Map</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
-    />
-    <style>
-      html, body, #map { height: 100%; margin: 0; padding: 0; }
-    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <style> html, body, #map { height: 100%; margin: 0; padding: 0; } </style>
   </head>
   <body>
     <div id="map"></div>
@@ -95,24 +122,21 @@ export default function ExMapScreen() {
       const locations = ${JSON.stringify(locations)};
       locations.forEach(loc => {
         const icon = loc.status === 'done' ? greenIcon : redIcon;
-
         const marker = L.marker([loc.latitude, loc.longitude], { icon }).addTo(map);
         marker.bindPopup(\`
-          By: <strong>\${loc.submittedBy}</strong><br/>
-          Trees: \${loc.numberOfTrees}<br/>
-          Status: \${loc.status}<br/>
-          Note: \${loc.note || 'N/A'}<br/>
+          <strong>Trees:</strong> \${loc.numberOfTrees}<br/>
+          <strong>Status:</strong> \${loc.status}<br/>
+          <strong>Note:</strong> \${loc.note || 'N/A'}<br/>
+          <strong>By:</strong> \${loc.submittedBy}<br/>
           <a href="https://www.google.com/maps?q=\${loc.latitude},\${loc.longitude}" target="_blank">
             Open in Google Maps
           </a>
         \`);
-
       });
     </script>
   </body>
   </html>
 `;
-
 
   if (loading) {
     return (
@@ -123,24 +147,29 @@ export default function ExMapScreen() {
   }
 
   return (
-    <WebView
-      originWhitelist={['*']}
-      source={{ html: leafletHtml }}
-      style={styles.webview}
-      javaScriptEnabled={true}
-      domStorageEnabled={true}
-      startInLoadingState
-    />
+    <View style={{ flex: 1 }}>
+      
+      <WebView
+        ref={webviewRef}
+        originWhitelist={['*']}
+        source={{ html: leafletHtml }}
+        style={styles.webview}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        startInLoadingState
+      />
+      <View style={styles.refreshButton}>
+        <Button title="Refresh" onPress={fetchLocations} color="#004520"/>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  webview: {
-    flex: 1,
-  },
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  webview: { flex: 1 },
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  refreshButton: {
+    padding: 5,
+    backgroundColor: '#eaeaea',
   },
 });
